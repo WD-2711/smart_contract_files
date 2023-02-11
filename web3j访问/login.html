@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>web3j访问</title>
+        <script src="web3.min.js"></script>
+        <script src="owner.js"></script>
+    </head>
+
+    <body>
+        <script type="text/javascript">
+
+            // 判断是否安装metamask，安装的话就登陆metamask
+            var myaccounts;
+            window.addEventListener('load', function(){
+                if(!window.web3){
+                    window.alert('Please install MetaMask');
+                    return;
+                }
+                if(window.ethereum){
+                    ethereum.enable().then(function(accounts){
+                        myaccounts = accounts;
+                        window.web3 = new Web3(ethereum);
+                    }).catch(function(error){
+                        console.error(error);
+                    })
+                }
+            });
+
+            function getOwner(){
+                var contractAddr = "0x6f3619C04B9B20e683d8D44b21931A3B39B46736";
+                // owner_abi 描述了合约的很多数据（函数名、是否可支付等），保存在owner.js中
+                // 从区块链读
+                var OwnerContract = new web3.eth.Contract(owner_abi, contractAddr);
+                OwnerContract.methods.getOwner().call(
+                    function(err, res){
+                        if(err){
+                            console.log(err);
+                            return;
+                        }
+                        alert("The Owner is:" + res);
+                    }
+                );
+            }
+
+            function changeOwner(){
+                var newOwner = document.getElementById("newowner").value;
+                var contractAddr = "0x6f3619C04B9B20e683d8D44b21931A3B39B46736";
+                var OwnerContract = new web3.eth.Contract(owner_abi, contractAddr);
+                var me = myaccounts[0];
+                // 向区块链写
+                var trans = OwnerContract.methods.changeOwner(newOwner);
+                trans.send({from:me}).on('transactionHash', function(hash){
+                    console.log(hash);
+                }).on('receipt', function(receipt){
+                    console.log(receipt);
+                }).on('confirmation', function(confirmationNumber, receipt){
+                    console.log(confirmationNumber);
+                }).on('error', function(error, receipt){
+                    console.log(error);
+                });
+            }
+
+            function sign(){
+                var myDate = new Date();
+                var timestamp = myDate.getTime();
+                web3.eth.getCoinbase().then(function(coinbase, error){
+                    var data = web3.utils.fromUtf8(timestamp + coinbase);
+                    data = web3.utils.sha3(data);
+                    web3.eth.sign(data, coinbase).then(function(sig){
+                        alert(sig);
+                    })
+                }).catch(function(error){
+                    console.error(error);
+                })
+            }
+        </script>
+        <div class = "div">
+            <input type="button" onclick="javascript:sign()" class="button" value="sign" />
+            <input type="button" onclick="javascript:getOwner()" class="button" value="read owner" />
+            <input type="button" onclick="javascript:changeOwner()" class="button" value="change owner" />
+            <input type="text" id="newowner" />
+        </div>
+    </body>
+</html>
